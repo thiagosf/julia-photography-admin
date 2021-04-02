@@ -1,0 +1,33 @@
+name: CI
+on:
+  push:
+    branches: [ master ]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - run: echo -n $ENV_MASTER | base64 --decode --ignore-garbage > .env
+      shell: bash
+      env:
+        ENV_MASTER: ${{ secrets.ENV_MASTER }}
+    - name: rsync deployments
+      uses: burnett01/rsync-deployments@4.1
+      with:
+        switches: -avzr
+        path: /
+        remote_path: ${{ secrets.REMOTE_PATH_MASTER }}
+        remote_host: ${{ secrets.HOST_MASTER }}
+        remote_user: ${{ secrets.USER_MASTER }}
+        remote_key: ${{ secrets.PRIVATE_KEY_MASTER }}
+  build:
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run SSH command
+        uses: garygrossgarten/github-action-ssh@v0.5.0
+        with:
+          command: ${{ secrets.COMMAND_MASTER }}
+          host: ${{ secrets.HOST_MASTER }}
+          username: ${{ secrets.USER_MASTER }}
+          privateKey: ${{ secrets.PRIVATE_KEY_MASTER }}
